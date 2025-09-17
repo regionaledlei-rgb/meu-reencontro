@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Site de Imagem Anual e Semanal</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Garante que o body ocupe a altura total da viewport */
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            overflow: hidden; /* Evita barras de rolagem se a imagem for muito grande */
+        }
+        #scheduledImage {
+            max-width: 100%; /* Limita a largura máxima da imagem a 90% da tela */
+            max-height: 100vh; /* Limita a altura máxima da imagem a 80% da altura da tela */
+            border: 8px solid #333; /* Borda estilizada */
+            border-radius: 10px; /* Cantos arredondados */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); /* Sombra para profundidade */
+            object-fit: contain; /* Garante que a imagem se ajuste sem ser cortada, mantendo a proporção */
+            transition: opacity 1s ease-in-out; /* Transição suave para a opacidade (fade-in/fade-out) */
+        }
+        /* Classes para a transição de fade */
+        #scheduledImage.fade-out {
+            opacity: 0; /* Imagem fica invisível durante o fade-out */
+        }
+        #scheduledImage.fade-in {
+            opacity: 1; /* Imagem fica totalmente visível após o fade-in */
+        }
+    </style>
+</head>
+<body>
+    <img id="scheduledImage" src="" alt="Imagem do Dia e da Semana do Ano">
+
+    <script>
+        const imageElement = document.getElementById('scheduledImage');
+        let currentDisplayedImageSrc = ''; // Armazena o caminho da imagem atualmente visível no elemento <img>
+        let lastTransitionDayOfMonth = -1; // Usado para garantir que a transição agendada ocorra apenas uma vez por dia.
+
+        // === FUNÇÕES AUXILIARES PARA CÁLCULO DE DATAS ===
+
+        // Calcula o dia do ano (1-366) para uma dada data.
+        function getDayOfYear(date) {
+            const startOfYear = new Date(date.getFullYear(), 0, 1); // 1º de Janeiro do ano atual
+            const diff = date.getTime() - startOfYear.getTime(); // Diferença em milissegundos
+            const oneDay = 1000 * 60 * 60 * 24; // Milissegundos em um dia
+            return Math.floor(diff / oneDay) + 1; // Retorna o dia do ano, 1-indexado (ex: 1º Jan = 1)
+        }
+
+        // Calcula a "semana simples" do ano (0-indexada) para uma dada data.
+        // Divide o ano em blocos de 7 dias a partir de 1º de Janeiro.
+        // Retorna um índice de 0 a 52.
+        function getWeekOfYearSimple(date) {
+            const dayOfYear = getDayOfYear(date);
+            // (dayOfYear - 1) para tornar 0-indexado para acesso ao array (ex: dias 1-7 do ano = semana 0)
+            return Math.floor((dayOfYear - 1) / 7);
+        }
+
+        // === CONFIGURAÇÃO DA AGENDA DE IMAGENS ===
+
+        // 1. Defina o HORÁRIO EM QUE A IMAGEM DEVE REALIZAR A TRANSIÇÃO (UMA VEZ AO DIA).
+        const DAILY_CHANGE_TIME = '03:49'; // Exemplo: 8 da manhã (formato HH:MM - 24 horas)
+
+        // 2. Função para gerar uma agenda padrão com imagens de fallback ('imagens/default.jpg').
+        //    Isso é CRÍTICO: Garante que o array 'yearlyWeeklySchedule' sempre tenha 53 semanas válidas
+        //    e 7 dias por semana preenchidos, evitando erros de acesso a posições 'undefined'.
+        function generateDefaultYearlySchedule(defaultImgPath = 'imagens/default.jpg') {
+            const schedule = [];
+            for (let i = 0; i < 53; i++) { // Geração para 53 semanas (cobre todos os dias do ano)
+                const week = [];
+                for (let j = 0; j < 7; j++) { // 7 dias da semana (Domingo a Sábado)
+                    week.push(defaultImgPath); // Preenche com o caminho da imagem padrão
+                }
+                schedule.push(week);
+            }
+            return schedule;
+        }
+
+        // Inicializa a agenda anual com a imagem padrão para todos os dias.
+        // ATENÇÃO: Certifique-se de que o arquivo 'imagens/default.jpg' exista na sua pasta 'imagens/'!
+        const yearlyWeeklySchedule = generateDefaultYearlySchedule('imagens/default.jpg');
+
+        // === PERSONALIZAÇÃO DA AGENDA ===
+        // AGORA, VOCÊ PERSONALIZA AS SEMANAS E DIAS ESPECÍFICOS.
+        // Se uma semana ou dia não for personalizado aqui, ele usará a 'imagens/default.jpg' por padrão.
+        // O índice da semana começa em 0 (para a primeira semana do ano).
+        // O índice do dia da semana começa em 0 (para Domingo).
+
+        // Exemplo: Personalização para a PRIMEIRA SEMANA DO ANO (índice 0)
+        yearlyWeeklySchedule[0] = [
+            'imagens/sem01_domingo.jpg',    // Semana 01, Domingo
+            'imagens/sem01_segunda.jpg',    // Semana 01, Segunda-feira
+            'imagens/sem01_terca.jpg',      // Semana 01, Terça-feira
+            'imagens/sem01_quarta.jpg',     // Semana 01, Quarta-feira
+            'imagens/sem01_quinta.jpg',     // Semana 01, Quinta-feira
+            'imagens/sem01_sexta.jpg',      // Semana 01, Sexta-feira
+            'imagens/sem01_sabado.jpg'      // Semana 01, Sábado
+        ];
+
+        // Exemplo: Personalização para a SEGUNDA SEMANA DO ANO (índice 1)
+        yearlyWeeklySchedule[1] = [
+            'imagens/sem02_domingo.jpg',
+            'imagens/sem02_segunda.jpg',
+            'imagens/sem02_terca.jpg',
+            'imagens/sem02_quarta.jpg',
+            'imagens/sem02_quinta.jpg',
+            'imagens/sem02_sexta.jpg',
+            'imagens/sem02_sabado.jpg'
+        ];
+
+        // Exemplo: Personalização para a TERCEIRA SEMANA DO ANO (índice 2)
+        yearlyWeeklySchedule[2] = [
+            'imagens/sem03_domingo.jpg',
+            'imagens/sem03_segunda.jpg',
+            'imagens/sem03_terca.jpg',
+            'imagens/sem03_quarta.jpg',
+            'imagens/sem03_quinta.jpg',
+            'imagens/sem03_sexta.jpg',
+            'imagens/sem03_sabado.jpg'
+        ];
+
+        // Exemplo: Personalização para a 38 SEMANA DO ANO (índice 37)
+        yearlyWeeklySchedule[37] = [
+            'imagens/sem37_domingo.jpg',
+            'imagens/sem37_segunda.jpg',
+            'imagens/sem37_terca.jpg',
+            'imagens/sem37_quarta.jpg',
+            'imagens/sem37_quinta.jpg',
+            'imagens/sem37_sexta.jpg',
+            'imagens/sem37_sabado.jpg'
+        ];
+
+        // ... ADICIONE MAIS ENTRADAS PARA AS SEMANAS QUE VOCÊ QUISER CUSTOMIZAR.
+        // Lembre-se: yearlyWeeklySchedule[X] onde X é o índice da semana (0 a 52).
+        // Exemplo para a 53ª semana (índice 52, se aplicável, para os últimos dias do ano):
+        /*
+        yearlyWeeklySchedule[52] = [
+            'imagens/sem53_domingo.jpg',
+            'imagens/sem53_segunda.jpg',
+            'imagens/sem53_terca.jpg',
+            'imagens/sem53_quarta.jpg',
+            'imagens/sem53_quinta.jpg',
+            'imagens/sem53_sexta.jpg',
+            'imagens/sem53_sabado.jpg'
+        ];
+        */
+
+        // === FUNÇÕES PRINCIPAIS DE CONTROLE ===
+
+        // Determina qual imagem deve ser exibida hoje com base na semana do ano e dia da semana.
+        function getTargetImageSrc() {
+            const now = new Date();
+            const currentWeekOfYear = getWeekOfYearSimple(now); // Índice da semana do ano (0-52)
+            const currentDayOfWeek = now.getDay();    // Índice do dia da semana (0=Dom, 1=Seg... 6=Sáb)
+            
+            // Graças à generateDefaultYearlySchedule, yearlyWeeklySchedule[currentWeekOfYear]
+            // sempre existirá e conterá um array de 7 caminhos, mesmo que sejam todos default.jpg.
+            // Isso previne 'TypeError: Cannot read properties of undefined'.
+            return yearlyWeeklySchedule[currentWeekOfYear][currentDayOfWeek];
+        }
+
+        // Aplica a imagem no elemento <img>, com ou sem animação de fade.
+        function applyImage(src, animate = true) {
+            // Se a imagem a ser aplicada já é a que está visível, não faz nada para otimizar.
+            if (currentDisplayedImageSrc === src) {
+                // Apenas garante que a imagem esteja visível (não em fade-out)
+                imageElement.classList.remove('fade-out');
+                imageElement.classList.add('fade-in');
+                return;
+            }
+
+            // Realiza a troca da imagem.
+            if (animate) {
+                imageElement.classList.add('fade-out'); // Inicia o fade-out
+                setTimeout(() => {
+                    imageElement.src = src; // Troca o src da imagem
+                    currentDisplayedImageSrc = src; // Atualiza o controle interno
+                    imageElement.classList.remove('fade-out'); // Remove fade-out
+                    imageElement.classList.add('fade-in'); // Inicia o fade-in
+                }, 1000); // O atraso deve corresponder à duração da transição em CSS (1s)
+            } else {
+                // Troca imediata, sem animação (útil na carga inicial ou se o horário de troca já passou).
+                imageElement.src = src;
+                currentDisplayedImageSrc = src; // Atualiza o controle interno
+                imageElement.classList.remove('fade-out');
+                imageElement.classList.add('fade-in');
+            }
+        }
+
+        // Gerencia a exibição e a troca da imagem diária. Chamada a cada minuto.
+        function manageDailyImageUpdate() {
+            const now = new Date();
+            const currentDayOfMonth = now.getDate(); // Pega o dia do mês (usado para controlar a transição diária)
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
+            const [changeHour, changeMinute] = DAILY_CHANGE_TIME.split(':').map(Number); // Horário de troca definido
+
+            const targetImageSrc = getTargetImageSrc(); // Obtém o caminho da imagem que deve ser exibida hoje.
+
+            // Verifica se o horário de troca já passou hoje.
+            const isPastChangeTime = (currentHour > changeHour || (currentHour === changeHour && currentMinute >= changeMinute));
+            // Verifica se a transição para o dia atual já foi processada.
+            const hasProcessedDailyChange = (lastTransitionDayOfMonth === currentDayOfMonth);
+
+            // Se já passou do horário de troca E a transição ainda não foi processada para HOJE:
+            if (isPastChangeTime && !hasProcessedDailyChange) {
+                applyImage(targetImageSrc, true); // Aplica a imagem com animação
+                lastTransitionDayOfMonth = currentDayOfMonth; // Marca que a transição foi processada para HOJE
+            } 
+            // Caso contrário (ainda não é o horário de troca, ou já passou e já foi processado):
+            else {
+                applyImage(targetImageSrc, false); // Aplica a imagem sem animação (troca imediata)
+            }
+        }
+
+        // === INICIALIZAÇÃO E LOOP ===
+
+        // Executa a função na carga inicial da página para definir a imagem correta imediatamente.
+        manageDailyImageUpdate();
+
+        // Configura um intervalo para verificar e atualizar a imagem a cada minuto.
+        // Isso é necessário para detectar o exato momento em que o DAILY_CHANGE_TIME é atingido.
+        setInterval(manageDailyImageUpdate, 60 * 1000); // 60 segundos * 1000 milissegundos = 1 minuto
+    </script>
+</body>
+</html>
